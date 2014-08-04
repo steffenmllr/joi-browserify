@@ -1,4 +1,4 @@
-# joi-browserify
+# joi-browserify [![NPM version][npm-image]][npm-url] [![Build Status][travis-image]][travis-url]
 
 Shim to use [Joi](https://github.com/hapijs/joi) in the browser with Browserify.
 
@@ -19,3 +19,10 @@ removed from the package.
 ### License
 
 [MIT](LICENSE.txt)
+
+[npm-url]: https://npmjs.org/package/joi-browserify
+[npm-image]: http://img.shields.io/npm/v/joi-browserify.svg
+
+[travis-url]: http://travis-ci.org/fhemberger/joi-browserify
+[travis-image]: http://img.shields.io/travis/fhemberger/joi-browserify.svg
+
