@@ -1,6 +1,7 @@
 // Load modules
 
 var Lab = require('lab');
+var Code = require('code');
 var Joi = require('../joi-browserify.min.js');
 
 
@@ -11,11 +12,12 @@ var internals = {};
 
 // Test shortcuts
 
-var expect = Lab.expect;
-var before = Lab.before;
-var after = Lab.after;
-var describe = Lab.experiment;
-var it = Lab.test;
+var lab = exports.lab = Lab.script();
+var before = lab.before;
+var after = lab.after;
+var describe = lab.describe;
+var it = lab.it;
+var expect = Code.expect;
 
 
 exports.validate = function (schema, config, callback) {
@@ -44,6 +46,21 @@ exports.validateOptions = function (schema, config, options, callback) {
         }
 
         expect(err === null).to.equal(item[1]);
+
+        if (item.length >= 4) {
+            var comparator = item[3];
+            if (item[1]) {
+                expect(value).to.deep.equal(comparator);
+            }
+            else {
+                if (comparator instanceof RegExp) {
+                    expect(err.message).to.match(comparator);
+                }
+                else {
+                    expect(err.message).to.deep.equal(comparator);
+                }
+            }
+        }
     }
 
     if (callback) {

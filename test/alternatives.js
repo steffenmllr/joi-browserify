@@ -1,6 +1,7 @@
 // Load modules
 
 var Lab = require('lab');
+var Code = require('code');
 var Joi = require('../joi-browserify.min.js');
 var Helper = require('./helper');
 
@@ -12,11 +13,12 @@ var internals = {};
 
 // Test shortcuts
 
-var expect = Lab.expect;
-var before = Lab.before;
-var after = Lab.after;
-var describe = Lab.experiment;
-var it = Lab.test;
+var lab = exports.lab = Lab.script();
+var before = lab.before;
+var after = lab.after;
+var describe = lab.describe;
+var it = lab.it;
+var expect = Code.expect;
 
 
 describe('alternatives', function () {
@@ -25,7 +27,7 @@ describe('alternatives', function () {
 
         Joi.alternatives().validate('a', function (err, value) {
 
-            expect(err).to.exist;
+            expect(err).to.exist();
             expect(err.message).to.equal('value not matching any of the allowed alternatives');
             done();
         });
@@ -35,7 +37,7 @@ describe('alternatives', function () {
 
         Joi.alternatives().validate(undefined, function (err, value) {
 
-            expect(err).to.not.exist;
+            expect(err).to.not.exist();
             done();
         });
     });
@@ -51,7 +53,7 @@ describe('alternatives', function () {
 
         schema.validate({ a: '5' }, function (err, value) {
 
-            expect(err).to.not.exist;
+            expect(err).to.not.exist();
             expect(value.a).to.equal(5);
             done();
         });
@@ -68,7 +70,7 @@ describe('alternatives', function () {
 
         schema.validate({ a: '5' }, function (err, value) {
 
-            expect(err).to.not.exist;
+            expect(err).to.not.exist();
             expect(value.a).to.equal(5);
             done();
         });
@@ -86,7 +88,7 @@ describe('alternatives', function () {
         var input = { a: { b: 'any', d: 'string' } };
         schema.validate(input, function (err, value) {
 
-            expect(err).to.not.exist;
+            expect(err).to.not.exist();
             expect(value.a.b).to.equal('any');
             done();
         });
@@ -264,7 +266,9 @@ describe('alternatives', function () {
                     b: {
                         type: 'any'
                     },
-                    a: [
+                    a: {
+                      type: 'alternatives',
+                      alternatives: [
                       {
                           ref: 'ref:b',
                           is: {
@@ -272,7 +276,8 @@ describe('alternatives', function () {
                               flags: {
                                   allowOnly: true
                               },
-                              valids: [5]
+                              valids: [5],
+                              invalids: [Infinity, -Infinity]
                           },
                           then: {
                               type: 'string',
@@ -300,6 +305,7 @@ describe('alternatives', function () {
                           invalids: ['']
                       }
                     ]
+                  }
                 }
             };
 
@@ -321,34 +327,38 @@ describe('alternatives', function () {
                     b: {
                         type: 'any'
                     },
-                    a: [
-                      {
-                          ref: 'ref:b',
-                          is: {
-                              type: 'number',
-                              flags: {
-                                  allowOnly: true
-                              },
-                              valids: [5]
-                          },
-                          then: {
-                              type: 'string',
-                              flags: {
-                                  allowOnly: true
-                              },
-                              valids: ['x'],
-                              invalids: ['']
-                          }
-                      },
-                      {
-                          type: 'string',
-                          flags: {
-                              allowOnly: true
-                          },
-                          valids: ['z'],
-                          invalids: ['']
-                      }
-                    ]
+                    a: {
+                        type: 'alternatives',
+                        alternatives: [
+                            {
+                                ref: 'ref:b',
+                                is: {
+                                    type: 'number',
+                                    flags: {
+                                        allowOnly: true
+                                    },
+                                    valids: [5],
+                                    invalids: [Infinity, -Infinity]
+                                },
+                                then: {
+                                    type: 'string',
+                                    flags: {
+                                        allowOnly: true
+                                    },
+                                    valids: ['x'],
+                                    invalids: ['']
+                                }
+                            },
+                            {
+                                type: 'string',
+                                flags: {
+                                    allowOnly: true
+                                },
+                                valids: ['z'],
+                                invalids: ['']
+                            }
+                        ]
+                    }
                 }
             };
 
@@ -370,35 +380,71 @@ describe('alternatives', function () {
                     b: {
                         type: 'any'
                     },
-                    a: [
-                      {
-                          ref: 'ref:b',
-                          is: {
-                              type: 'number',
-                              flags: {
-                                  allowOnly: true
-                              },
-                              valids: [5]
-                          },
-                          otherwise: {
-                              type: 'string',
-                              flags: {
-                                  allowOnly: true
-                              },
-                              valids: ['y'],
-                              invalids: ['']
-                          }
-                      },
-                      {
-                          type: 'string',
-                          flags: {
-                              allowOnly: true
-                          },
-                          valids: ['z'],
-                          invalids: ['']
-                      }
-                    ]
+                    a: {
+                        type: 'alternatives',
+                        alternatives: [
+                            {
+                                ref: 'ref:b',
+                                is: {
+                                    type: 'number',
+                                    flags: {
+                                        allowOnly: true
+                                    },
+                                    valids: [5],
+                                    invalids: [Infinity, -Infinity]
+                                },
+                                otherwise: {
+                                    type: 'string',
+                                    flags: {
+                                        allowOnly: true
+                                    },
+                                    valids: ['y'],
+                                    invalids: ['']
+                                }
+                            },
+                            {
+                                type: 'string',
+                                flags: {
+                                    allowOnly: true
+                                },
+                                valids: ['z'],
+                                invalids: ['']
+                            }
+                        ]
+                    }
                 }
+            };
+
+            expect(Joi.describe(schema)).to.deep.equal(outcome);
+            done();
+        });
+
+        it('describes inherited fields (from any)', function (done) {
+
+            var schema = Joi.alternatives()
+                .try('a')
+                .description('d')
+                .example('a')
+                .meta('b')
+                .meta('c')
+                .notes('f')
+                .tags('g');
+
+            var outcome = {
+                type: 'alternatives',
+                description: 'd',
+                notes: ['f'],
+                tags: ['g'],
+                meta: ['b', 'c'],
+                examples: ['a'],
+                alternatives: [{
+                    type: 'string',
+                    flags: {
+                        allowOnly: true
+                    },
+                    valids: ['a'],
+                    invalids: ['']
+                }]
             };
 
             expect(Joi.describe(schema)).to.deep.equal(outcome);

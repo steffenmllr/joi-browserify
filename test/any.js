@@ -1,6 +1,7 @@
 // Load modules
 
 var Lab = require('lab');
+var Code = require('code');
 var Joi = require('../joi-browserify.min.js');
 var Helper = require('./helper');
 
@@ -12,11 +13,12 @@ var internals = {};
 
 // Test shortcuts
 
-var expect = Lab.expect;
-var before = Lab.before;
-var after = Lab.after;
-var describe = Lab.experiment;
-var it = Lab.test;
+var lab = exports.lab = Lab.script();
+var before = lab.before;
+var after = lab.after;
+var describe = lab.describe;
+var it = lab.it;
+var expect = Code.expect;
 
 
 describe('any', function () {
@@ -79,10 +81,41 @@ describe('any', function () {
             var input = { b: '2' };
             schema.validate(input, function (err, value) {
 
-                expect(err).to.not.exist;
+                expect(err).to.not.exist();
                 expect(value.b).to.equal(2);
                 done();
             });
+        });
+    });
+
+    describe('#label', function () {
+
+        it('adds to existing options', function (done) {
+
+            var schema = Joi.object({ b: Joi.string().email().label('Custom label') });
+            var input = { b: 'not_a_valid_email' };
+            schema.validate(input, function (err, value) {
+
+                expect(err).to.exist();
+                expect(err.details[0].message).to.equal('Custom label must be a valid email');
+                done();
+            });
+        });
+
+        it('throws when label is missing', function (done) {
+
+            expect(function () {
+
+                Joi.label();
+            }).to.throw('Label name must be a non-empty string');
+            done();
+        });
+
+        it('can describe a label', function (done) {
+
+            var schema = Joi.object().label('lbl').describe();
+            expect(schema).to.deep.equal({ type: 'object', label: 'lbl' });
+            done();
         });
     });
 
@@ -94,10 +127,48 @@ describe('any', function () {
             var input = { b: '2' };
             schema.validate(input, function (err, value) {
 
-                expect(err).to.exist;
+                expect(err).to.exist();
                 expect(value.b).to.equal('2');
                 done();
             });
+        });
+    });
+
+    describe('#raw', function () {
+
+        it('gives the raw input', function (done) {
+
+            var tests = [
+                [Joi.array(), '[1,2,3]'],
+                [Joi.binary(), 'abc'],
+                [Joi.boolean(), 'false'],
+                [Joi.date().format('YYYYMMDD'), '19700101'],
+                [Joi.number(), '12'],
+                [Joi.object(), '{ "a": 1 }'],
+                [Joi.any().strict(), 'abc']
+            ];
+
+            tests.forEach(function (test) {
+
+                var baseSchema = test[0];
+                var input = test[1];
+                var schemas = [
+                    baseSchema.raw(),
+                    baseSchema.raw(true),
+                    baseSchema.options({ raw: true })
+                ];
+
+                schemas.forEach(function (schema) {
+
+                    schema.raw().validate(input, function (err, value) {
+
+                        expect(err).to.not.exist();
+                        expect(value).to.equal(input);
+                    });
+                });
+            });
+
+            done();
         });
     });
 
@@ -110,7 +181,7 @@ describe('any', function () {
 
             schema.validate(input, function (err, value) {
 
-                expect(err).to.not.exist;
+                expect(err).to.not.exist();
                 expect(value.foo).to.equal('test');
                 done();
             });
@@ -123,13 +194,13 @@ describe('any', function () {
 
             schema.validate(input, function (err, value) {
 
-                expect(err).to.not.exist;
+                expect(err).to.not.exist();
                 expect(value.foo).to.equal('test');
                 done();
             });
         });
 
-        it('sets value based on condition (outter)', function (done) {
+        it('sets value based on condition (outer)', function (done) {
 
             var schema = Joi.object({
                 a: Joi.boolean(),
@@ -138,7 +209,7 @@ describe('any', function () {
 
             schema.validate({ a: false }, function (err, value) {
 
-                expect(err).to.not.exist;
+                expect(err).to.not.exist();
                 expect(value.b).to.equal(false);
                 done();
             });
@@ -153,10 +224,33 @@ describe('any', function () {
 
             schema.validate({ a: true }, function (err, value) {
 
-                expect(err).to.not.exist;
+                expect(err).to.not.exist();
                 expect(value.b).to.equal(false);
                 done();
             });
+        });
+    });
+
+    describe('#optional', function () {
+
+        it('validates optional with default required', function (done) {
+
+            var schema = Joi.object({
+                a: Joi.any(),
+                b: Joi.any(),
+                c: {
+                    d: Joi.any()
+                }
+            }).options({ presence: 'required' });
+
+            Helper.validate(schema, [
+                [{ a: 5 }, false],
+                [{ a: 5, b: 6 }, false],
+                [{ a: 5, b: 6, c: {} }, false],
+                [{ a: 5, b: 6, c: { d: 7 } }, true],
+                [{}, false],
+                [{ b: 5 }, false]
+            ], done);
         });
     });
 
@@ -339,7 +433,7 @@ describe('any', function () {
             var schema = Joi.number().invalid(2);
             Joi.validate('2', schema, { abortEarly: false }, function (err, value) {
 
-                expect(err).to.exist;
+                expect(err).to.exist();
                 done();
             });
         });
@@ -569,7 +663,7 @@ describe('any', function () {
 
             a.concat(b).validate({ c: 1, d: 2 }, function (err, value) {
 
-                expect(err).to.not.exist;
+                expect(err).to.not.exist();
                 expect(value).to.deep.equal({ a: 1, b: 2 });
                 done();
             });
@@ -582,7 +676,7 @@ describe('any', function () {
 
             a.concat(b).validate({ a: 1, b: 2 }, function (err, value) {
 
-                expect(err).to.not.exist;
+                expect(err).to.not.exist();
                 done();
             });
         });
@@ -702,6 +796,97 @@ describe('any', function () {
                 [{ a: 'b' }, true],
                 [{ b: 5, a: 'x' }, true]
             ], done)
+        });
+    });
+
+    describe('#requiredKeys', function () {
+
+        it('should set keys as required', function (done) {
+
+            var schema = Joi.object({ a: 0, b: 0, c: { d: 0, e: { f: 0 } }, g: { h: 0 } })
+                .requiredKeys('a', 'b', 'c.d', 'c.e.f', 'g');
+            Helper.validate(schema, [
+                [{}, false],
+                [{ a: 0 }, false],
+                [{ a: 0, b: 0 }, false],
+                [{ a: 0, b: 0, g: {} }, true],
+                [{ a: 0, b: 0, c: {}, g: {} }, false],
+                [{ a: 0, b: 0, c: { d: 0 }, g: {} }, true],
+                [{ a: 0, b: 0, c: { d: 0, e: {} }, g: {} }, false],
+                [{ a: 0, b: 0, c: { d: 0, e: { f: 0 } }, g: {} }, true]
+            ], done);
+        });
+
+        it('should work on types other than objects', function (done) {
+
+            var schemas = [Joi.array(), Joi.binary(), Joi.boolean(), Joi.date(), Joi.func(), Joi.number(), Joi.string()];
+            schemas.forEach(function (schema) {
+
+                expect(function () {
+
+                    schema.applyFunctionToChildren([''], 'required');
+                }).to.not.throw();
+
+                expect(function () {
+
+                    schema.applyFunctionToChildren(['', 'a'], 'required');
+                }).to.throw();
+
+                expect(function () {
+
+                    schema.applyFunctionToChildren(['a'], 'required');
+                }).to.throw();
+            });
+
+            done();
+        });
+
+        it('should throw on unknown key', function (done) {
+
+            expect(function() {
+                Joi.object({ a: 0, b: 0 }).requiredKeys('a', 'c', 'b', 'd', 'd.e.f');
+            }).to.throw(Error, 'unknown key(s) c, d');
+            expect(function() {
+                Joi.object({ a: 0, b: 0 }).requiredKeys('a', 'b', 'a.c.d');
+            }).to.throw(Error, 'unknown key(s) a.c.d');
+            done();
+        });
+
+        it('should throw on empty object', function (done) {
+
+            expect(function() {
+                Joi.object().requiredKeys('a', 'c', 'b', 'd');
+            }).to.throw(Error, 'unknown key(s) a, b, c, d');
+            done();
+        });
+
+        it('should not modify original object', function (done) {
+
+            var schema = Joi.object({ a: 0 });
+            var requiredSchema = schema.requiredKeys('a');
+            schema.validate({}, function (err) {
+
+                expect(err).to.not.exist();
+
+                requiredSchema.validate({}, function (err) {
+
+                    expect(err).to.exist();
+                    done();
+                });
+            });
+        });
+    });
+
+    describe('#optionalKeys', function () {
+
+        it('should set keys as optional', function (done) {
+
+            var schema = Joi.object({ a: Joi.number().required(), b: Joi.number().required() }).optionalKeys('a', 'b');
+            Helper.validate(schema, [
+                [{}, true],
+                [{ a: 0 }, true],
+                [{ a: 0, b: 0 }, true]
+            ], done);
         });
     });
 
